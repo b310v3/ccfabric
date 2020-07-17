@@ -25,10 +25,16 @@
       </repository>
    </repositories>
    <dependencies>
+      <!-- https://mvnrepository.com/artifact/org.json/json -->
+      <dependency>
+         <groupId>org.json</groupId>
+         <artifactId>json</artifactId>
+         <version>20200518</version>
+      </dependency>
       <dependency>
          <groupId>org.hyperledger.fabric</groupId>
          <artifactId>fabric-gateway-java</artifactId>
-         <version>1.4.1-SNAPSHOT</version>
+         <version>2.1.0</version>
       </dependency>
       <dependency>
          <groupId>org.junit.platform</groupId>
