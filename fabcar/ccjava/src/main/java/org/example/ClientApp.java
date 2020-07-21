@@ -38,9 +38,15 @@ public class ClientApp {
 
 	private static Consumer<ContractEvent> contractListener;
 	private static final BlockingQueue<ContractEvent> contractEvents = new LinkedBlockingQueue<>();
-	private final static String QUORUM_ADDRESS = "0x01E4300aEc7188d7108880De4fBf2f0691ec797C";
+	private final static String EXCHANGE_NAME = "getupandwork";
+    private final static String CHAIN_NAME = "A";
+    private final static String PEER_IP = "localhost:9051";
+    private final static String QUORUM_ADDRESS = "0x01E4300aEc7188d7108880De4fBf2f0691ec797C";
     private final static String QUORUM_ENODE = "8be33cd80714e0c967d9f6c4281c315a9b3879a8ac06626f4a359c49b3280997508b16b555a8083b6ecb53130548e32db38fdb11bcc8381ecfc0615329ea113c";
-
+    private final static String MQ_HOST = "140.118.109.132";
+    private final static String USERNAME = "belove";
+	private final static String PASSWORD = "oc886191";
+	
 	static {
 		System.setProperty("org.hyperledger.fabric.sdk.service_discovery.as_localhost", "true");
 	}
@@ -66,16 +72,19 @@ public class ClientApp {
 
 			contractListener = contract.addContractListener(contractEvents::add, "crosschain");
 			System.out.println("====== Start Moinitoring ======");
-			ClientApp app = new ClientApp();
+			//ClientApp app = new ClientApp();
 
 			while (true) {
-				ContractEvent event = app.getContractEvent();
+				ContractEvent event = getContractEvent();
 				System.out.println(new String(event.getPayload().get()));
 				JSONObject jevent = new JSONObject(new String(event));
 
 				// send crosschain request to mqtt server
 				ConnectionFactory factory = new ConnectionFactory();
-				factory.setHost("140.118.109.132:5672");
+				factory.setHost(MQ_HOST);
+				factory.setPort(5672);
+				factory.setUsername(USERNAME);
+				factory.setPassword(PASSWORD);
 				try (Connection connection = factory.newConnection(); Channel channel = connection.createChannel()) {
 					channel.exchangeDeclare("getupandwork", "direct");
 					String replyQueueName = channel.queueDeclare().getQueue();
@@ -98,7 +107,7 @@ public class ClientApp {
 					channel.basicPublish(EXCHANGE_NAME, "Discocery_Service", props, jobj.toString().getBytes("UTF-8"));
 				}
 
-				// handle the peerlist from mqtt server (need to think about the pipeline of the requester)
+				// handle the peerlist from mqtt server
 				System.out.println("... Waiting for server reply request ...");
 
 				DeliverCallback deliverCallback = (consumerTag, delivery) -> {
@@ -128,9 +137,16 @@ public class ClientApp {
 					ip[2] = peer3.getString("peerip");
 					ip[3] = peer4.getString("peerip");
 
-					for (int i = 0; i < 4; i++) {
+					for (int i = 1; i < 4; i++) {
 						channel.basicPublish(EXCHANGE_NAME, ip[i], null, files.toString().getBytes("UTF-8"));
 					}
+
+					// Save the genisis and static-nodes files
+					JsonWriter(genisisfile, true);
+					JsonWriter(staticnodesfile, false);
+
+					// start up quorum first and get the smart contract address
+					// call RunQuorun.java and send the eventdata, save the files.
 														
 				};
 				channel.basicConsume(replyQueueName, true, deliverCallback, consumerTag -> { });
@@ -157,13 +173,13 @@ public class ClientApp {
 		}
 	}
 
-	private ContractEvent getContractEvent() throws InterruptedException { //String expectedPayload
-		final List<String> payloads = new ArrayList<>();
+	private static ContractEvent getContractEvent() throws InterruptedException { //String expectedPayload
+		//final List<String> payloads = new ArrayList<>();
 		/*final ContractEvent matchingEvent = removeFirstMatch(contractEvents, event -> {
 			String eventPayload = event.getPayload().toString();
 			return expectedPayload.equals(eventPayload);
 		});*/
-		final ContractEvent matchingEvent = removeFirstMatch(contractEvents);
+		ContractEvent matchingEvent = removeFirstMatch(contractEvents);
 		
 		return matchingEvent;
 	}
@@ -179,8 +195,8 @@ public class ClientApp {
 	 */
 	private <T> T removeFirstMatch(final BlockingQueue<T> queue) //, final Predicate<? super T> match
 			throws InterruptedException {
-		final List<T> unmatchedElements = new ArrayList<>();
-        T element;
+		//final List<T> unmatchedElements = new ArrayList<>();
+        //T element;
 
         //while ((element = queue.take()) != null) {
 			//System.out.println(element);;
@@ -260,4 +276,21 @@ public class ClientApp {
 		System.out.println("enodes : " + enodearr.getString());
 		return enodearr;
 	}
+
+	private void JsonWriter(JSONObject obj, boolean isGenisis) {
+        if (isGenisis) {
+            File jsonFile = new File("/home/belove/quorum/fromscratch/genisis.json");
+        }
+        else {
+            File jsonFile = new File("/home/belove/quorum/fromscratch/new-node-1/static-nodes.json");
+        }
+        try (FileWriter file = new FileWriter(jsonFile)) {
+ 
+            file.write(obj.toJSONString());
+            file.flush();
+ 
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }

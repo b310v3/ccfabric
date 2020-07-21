@@ -77,7 +77,7 @@ public class ClientApp {
 			final String peer = peerlist[(rand.nextInt(peerlist.length))];
 			System.out.println(peer + " is the winner!");
 
-			contract.submitTransaction("Ccaction", gateway.getIdentity().getMspId(), "A-fabirc-chian", peer, "B-fabric-chain", "Happy Crosschain!");
+			contract.submitTransaction("Ccaction", "peer0.org1.example.com", "A-fabirc-chian", peer, "B-fabric-chain", "Happy Crosschain!");
 			/*
 			contractListener = contract.addContractListener(contractEvents::add, "crosschain");
 			ClientApp app = new ClientApp();
