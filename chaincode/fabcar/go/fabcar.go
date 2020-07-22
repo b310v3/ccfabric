@@ -62,7 +62,7 @@ type CrossChainInfo struct {
 
 // InitLedger adds a base set of cars to the ledger
 func (s *SmartContract) InitLedger(ctx contractapi.TransactionContextInterface) error {
-	peerlist := []string{"peer0"}
+	peerlist := []string{"peer0.org2.example.com"}
 	ccpeer := Ccpeer{Peer: peerlist}
 
 	ccpeerAsBytes, _ := json.Marshal(ccpeer)

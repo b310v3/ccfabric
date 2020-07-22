@@ -102,12 +102,12 @@ public class ClientApp {
 					.build();
 				// Create discovery info json
 				JSONObject jobj = new JSONObject();
-				jobj.put("targetchain", "B");
-				jobj.put("sourcechain", "A");
+				jobj.put("targetchain", "B-fabric-chain");
+				jobj.put("sourcechain", "A-fabric-chain");
 				jobj.put("sourceadd", QUORUM_ADDRESS);
 				jobj.put("sourceenode", QUORUM_ENODE);
 
-				channel.basicPublish(EXCHANGE_NAME, "Discocery_Service", props, jobj.toString().getBytes("UTF-8"));
+				channel.basicPublish(EXCHANGE_NAME, "Discovery_Service", props, jobj.toString().getBytes("UTF-8"));
 			
 
 				// handle the peerlist from mqtt server
@@ -144,7 +144,7 @@ public class ClientApp {
 					// Save the genisis and static-nodes files
 					JsonWriter(genisisfile);
 					JsonWriter(staticnodesfile);
-
+					/*
 					// start up quorum first and get the smart contract address
 					try {
 						RunQuorum quorum = new RunQuorum();
@@ -166,9 +166,9 @@ public class ClientApp {
 						}
 					}catch (Exception e) {
 						System.out.println("Quorum Error in clientapp");
-					}
+					}*/
 					System.out.println("all process done!");
-
+					
 				};
 				channel.basicConsume(replyQueueName, true, deliverCallback, consumerTag -> { });
 				// create the file to generate quorum

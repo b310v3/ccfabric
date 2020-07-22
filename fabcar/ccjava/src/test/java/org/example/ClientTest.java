@@ -6,7 +6,6 @@ package org.example;
 
 import org.junit.Test;
 
-import org.example.RegisterService;
 
 public class ClientTest {
 
@@ -14,7 +13,7 @@ public class ClientTest {
 	public void testFabCar() throws Exception {
 		EnrollAdmin.main(null);
 		RegisterUser.main(null);
-		RegisterService.main(null);
+		//RegisterService.main(null);
 		ClientApp.main(null);
 	}
 }

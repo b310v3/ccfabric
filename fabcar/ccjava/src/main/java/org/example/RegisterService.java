@@ -1,11 +1,11 @@
 package org.example;
 
-import java.util.Scanner;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.PrivateKey;
 import java.util.Properties;
 import java.util.Set;
+import java.util.UUID;
 
 import com.rabbitmq.client.*;
 
@@ -22,8 +22,8 @@ import org.hyperledger.fabric.gateway.Wallets;
 
 public class RegisterService {
     private final static String EXCHANGE_NAME = "getupandwork";
-    private final static String CHAIN_NAME = "A";
-    private final static String PEER_IP = "localhost:9051";
+    private final static String CHAIN_NAME = "A-fabric-chain";
+    private final static String PEER_IP = "peer0.org2.example.com";//"140.118.109.132:9051";
     private final static String QUORUM_ADDRESS = "0x01E4300aEc7188d7108880De4fBf2f0691ec797C";
     private final static String QUORUM_ENODE = "8be33cd80714e0c967d9f6c4281c315a9b3879a8ac06626f4a359c49b3280997508b16b555a8083b6ecb53130548e32db38fdb11bcc8381ecfc0615329ea113c";
     private final static String MQ_HOST = "140.118.109.132";
@@ -41,10 +41,17 @@ public class RegisterService {
         Channel channel = connection.createChannel();
         channel.exchangeDeclare(EXCHANGE_NAME, "direct", true);
         String queueName = channel.queueDeclare().getQueue();
-        channel.queueBind(queueName , EXCHANGE_NAME, "peer0.org2.example.com"); // the address will change to peer id later
+        //channel.queueBind(queueName , EXCHANGE_NAME, "peer0.org2.example.com");
+
+        final String corrId = UUID.randomUUID().toString();
+        AMQP.BasicProperties props = new AMQP.BasicProperties
+            .Builder()
+            .correlationId(corrId)
+            .replyTo(queueName)
+            .build();
 
         // Let user input the peer quorum address and enode
-        Scanner scanObj = new Scanner(System.in);
+        //Scanner scanObj = new Scanner(System.in);
         //System.out.println("Address : ");
         //String address = scanObj.nextLine(); 
         //System.out.println("Enode : ");
@@ -58,12 +65,15 @@ public class RegisterService {
         jsoninfo.put("peerenode", QUORUM_ENODE);
 
         // Send to mqtt register request
-        channel.basicPublish(EXCHANGE_NAME, "Rigister_Service", null, jsoninfo.toString().getBytes("UTF-8"));
+        channel.basicPublish(EXCHANGE_NAME, "Register_Service", props, jsoninfo.toString().getBytes("UTF-8"));
         System.out.println(" [x] Sent :'" + jsoninfo.toString() + "'");
+        System.out.println(" [*] Waiting for messages. To exit press CTRL+C");
+
 
         DeliverCallback deliverCallback = (consumerTag, delivery) -> {
             String message = new String(delivery.getBody(), "UTF-8");
-            if(message.substring(0,3) == "200") {
+            System.out.println(" [x] Received '" + message + "'");
+            if(message.substring(0,3).equals("200")) {
                 System.out.println(" [x] Received '" + delivery.getEnvelope().getRoutingKey() + "':'" + message + "'");
 
                 // Load a file system based wallet for managing identities.
@@ -83,6 +93,7 @@ public class RegisterService {
                     final Contract contract = network.getContract("fabcar");
 
                     contract.submitTransaction("Insertccpeer", "peer0.org2.example.com");
+                    System.out.println("Add cc peer into fabric!");
                 } catch (Exception e){
                     System.out.println("Error");
                 }
@@ -92,7 +103,8 @@ public class RegisterService {
                 System.exit(0);
             }
         };
+        
         channel.basicConsume(queueName, true, deliverCallback, consumerTag -> { });
-    
+        
     }
 }

@@ -1,5 +1,6 @@
 /home/belove/fabric/fabric-samples/fabcar/ccjava/src/main/java/org/example/RegisterService.java
 /home/belove/fabric/fabric-samples/fabcar/ccjava/src/main/java/org/example/RunQuorum.java
+/home/belove/fabric/fabric-samples/fabcar/ccjava/src/main/java/org/example/Recv.java
 /home/belove/fabric/fabric-samples/fabcar/ccjava/src/main/java/org/example/CChandler.java
 /home/belove/fabric/fabric-samples/fabcar/ccjava/src/main/java/org/example/RegisterUser.java
 /home/belove/fabric/fabric-samples/fabcar/ccjava/src/main/java/org/example/ClientApp.java

@@ -23,5 +23,6 @@ org/example/EnrollAdmin.class
 org/example/CrossChain$2.class
 org/example/ClientApp.class
 org/example/CrossChain.class
+org/example/Recv.class
 org/example/CrossChain$5.class
 org/example/CrossChain$15.class
