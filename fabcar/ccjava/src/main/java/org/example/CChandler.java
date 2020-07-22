@@ -1,7 +1,9 @@
-package main.java.org.example;
+package org.example;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.File;
+import java.lang.*;
 
 import com.rabbitmq.client.*;
 
@@ -18,7 +20,8 @@ public class CChandler {
     private final static String MQ_HOST = "140.118.109.132";
     private final static String USERNAME = "belove";
     private final static String PASSWORD = "oc886191";
-
+    private final static int PEER = 4;
+    private final static String PEER_ROUTING_KEY = "peer0.org2.example.com";
     public static void main(final String[] args) throws Exception {
         ConnectionFactory factory = new ConnectionFactory();
         factory.setHost(MQ_HOST);
@@ -28,11 +31,11 @@ public class CChandler {
         Connection connection = factory.newConnection();
         Channel channel = connection.createChannel();
 
-        channel.exchangDeclare(EXCHANGE_NAME, "direct");
-        String queueName = channel.queueDeclare.getQueue();
+        channel.exchangeDeclare(EXCHANGE_NAME, "direct", true);
+        String queueName = channel.queueDeclare().getQueue();
         channel.queueBind(queueName, EXCHANGE_NAME, PEER_ROUTING_KEY);
 
-        Syetem.out.println("=== Start to waiting crosschain mqtt request ===");
+        System.out.println("=== Start to waiting crosschain mqtt request ===");
 
         DeliverCallback deliverCallback = (consumerTag, delivery) -> {
             String message = new String(delivery.getBody(), "UTF-8");
@@ -43,28 +46,45 @@ public class CChandler {
             JSONObject files = new JSONObject(message);
             JSONObject genisis = files.getJSONObject("genisis");
             JSONObject staticNodes = files.getJSONObject("static-nodes");
+            String contractAddr = files.getString("contractaddr");
 
-            JsonWriter(genisis, true);
-            JsonWriter(staticNodes, false);
+            JsonWriter(genisis);
+            JsonWriter(staticNodes);
 
             // start up quorum
+            RunQuorum quorum = new RunQuorum();
+            try {
+                String[] ccdata = quorum.Deploy(contractAddr, PEER);
+                System.out.println("Received crosschain data: " + ccdata[0] + ccdata[1] + ccdata[2] + ccdata[3] + ccdata[4] + ccdata[5]);
+            }catch (Exception e) {
+                System.out.println("Quorum error!");
+            }
 
-            // handle the close of the quorum, and then send the transaction back to the fabric
+            // send the transaction back to the fabric
 
         };
         channel.basicConsume(queueName, true, deliverCallback, consumerTag -> { });
     }
 
-    private void JsonWriter(JSONObject obj, boolean isGenisis) {
-        if (isGenisis) {
-            File jsonFile = new File("/home/belove/quorum/fromscratch/genisis.json");
-        }
-        else {
-            File jsonFile = new File("/home/belove/quorum/fromscratch/new-node-1/static-nodes.json");
-        }
+    private static void JsonWriter(JSONObject obj) {
+        File jsonFile = new File("/home/belove/quorum/fromscratch/genisis.json");
+       
         try (FileWriter file = new FileWriter(jsonFile)) {
  
-            file.write(obj.toJSONString());
+            file.write(obj.toString());
+            file.flush();
+ 
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void JsonWriter(JSONArray obj) {
+        File jsonFile = new File("/home/belove/quorum/fromscratch/new-node-1/static-nodes.json");
+        
+        try (FileWriter file = new FileWriter(jsonFile)) {
+ 
+            file.write(obj.toString());
             file.flush();
  
         } catch (IOException e) {

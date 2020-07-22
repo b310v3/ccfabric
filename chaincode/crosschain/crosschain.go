@@ -55,7 +55,7 @@ type CrossChainInfo struct {
 	Ownerpeer   string `json:"ownerpeer"`
 	Ownerchain  string `json:"ownerchian"`
 	CCpeer      string `json:"ccpeer"`
-	Targetchian string `json:"targetchian"`
+	Targetchain string `json:"targetchain"`
 	Info        string `json:"info"`
 }
 
@@ -113,7 +113,7 @@ func (s *SmartContract) Ccaction(ctx contractapi.TransactionContextInterface, ow
 		Ownerpeer:   ownerpeer,
 		Ownerchain:  ownerchain,
 		CCpeer:      ccpeer,
-		Targetchian: targetchain,
+		Targetchain: targetchain,
 		Info:        info,
 	}
 

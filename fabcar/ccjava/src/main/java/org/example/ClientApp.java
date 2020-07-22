@@ -16,8 +16,12 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.io.ByteArrayInputStream;
 import java.io.ObjectInputStream;
+import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import java.util.UUID;
+import java.io.File;
+import java.io.FileWriter;
+import java.lang.*;
 
 import javax.crypto.KeyAgreement;
 
@@ -36,7 +40,7 @@ import com.rabbitmq.client.*;
 
 public class ClientApp {
 
-	private static Consumer<ContractEvent> contractListener;
+	private static java.util.function.Consumer<ContractEvent> contractListener;
 	private static final BlockingQueue<ContractEvent> contractEvents = new LinkedBlockingQueue<>();
 	private final static String EXCHANGE_NAME = "getupandwork";
     private final static String CHAIN_NAME = "A";
@@ -70,42 +74,41 @@ public class ClientApp {
 			final Network network = gateway.getNetwork("mychannel");
 			final Contract contract = network.getContract("fabcar");
 
+			// send crosschain request to mqtt server
+			ConnectionFactory factory = new ConnectionFactory();
+			factory.setHost(MQ_HOST);
+			factory.setPort(5672);
+			factory.setUsername(USERNAME);
+			factory.setPassword(PASSWORD);
+			Connection connection = factory.newConnection();
+			Channel channel = connection.createChannel();
+			channel.exchangeDeclare("getupandwork", "direct", true);
+			String replyQueueName = channel.queueDeclare().getQueue();
+
 			contractListener = contract.addContractListener(contractEvents::add, "crosschain");
 			System.out.println("====== Start Moinitoring ======");
-			//ClientApp app = new ClientApp();
 
 			while (true) {
 				ContractEvent event = getContractEvent();
 				System.out.println(new String(event.getPayload().get()));
-				JSONObject jevent = new JSONObject(new String(event));
+				JSONObject jevent = new JSONObject(new String(event.getPayload().get()));
 
-				// send crosschain request to mqtt server
-				ConnectionFactory factory = new ConnectionFactory();
-				factory.setHost(MQ_HOST);
-				factory.setPort(5672);
-				factory.setUsername(USERNAME);
-				factory.setPassword(PASSWORD);
-				try (Connection connection = factory.newConnection(); Channel channel = connection.createChannel()) {
-					channel.exchangeDeclare("getupandwork", "direct");
-					String replyQueueName = channel.queueDeclare().getQueue();
-					//channel.queueBind(queueName , "getupandwork", "peer0.org2.example.com");
+				// setting for RPC contractEvents.peek() != nullcall
+				final String corrId = UUID.randomUUID().toString();
+				AMQP.BasicProperties props = new AMQP.BasicProperties
+					.Builder()
+					.correlationId(corrId)
+					.replyTo(replyQueueName)
+					.build();
+				// Create discovery info json
+				JSONObject jobj = new JSONObject();
+				jobj.put("targetchain", "B");
+				jobj.put("sourcechain", "A");
+				jobj.put("sourceadd", QUORUM_ADDRESS);
+				jobj.put("sourceenode", QUORUM_ENODE);
 
-					// setting for RPC call
-					final String corrId = UUID.randomUUID().toString();
-					AMQP.BasicProperties props = new AMQP.BasicProperties
-						.Builder()
-						.correlationId(corrId)
-						.replyTo(replyQueueName)
-						.build();
-					// Create discovery info json
-					JSONObject jobj = new JSONobject();
-					jobj.put("targetchain", "B");
-					jobj.put("sourcechain", "A");
-					jobj.put("sourceadd", QUORUM_ADDRESS);
-					jobj.put("sourceenode", QUORUM_ENODE);
-
-					channel.basicPublish(EXCHANGE_NAME, "Discocery_Service", props, jobj.toString().getBytes("UTF-8"));
-				}
+				channel.basicPublish(EXCHANGE_NAME, "Discocery_Service", props, jobj.toString().getBytes("UTF-8"));
+			
 
 				// handle the peerlist from mqtt server
 				System.out.println("... Waiting for server reply request ...");
@@ -128,26 +131,44 @@ public class ClientApp {
 					JSONObject peer2 = new JSONObject();
 					JSONObject peer3 = new JSONObject();
 					JSONObject peer4 = new JSONObject();
-					peer1 = obj.getJSONObject("peer1");
-					peer2 = obj.getJSONObject("peer2");
-					peer3 = obj.getJSONObject("peer3");
-					peer4 = obj.getJSONObject("peer4");
+					peer1 = peerlist.getJSONObject("peer1");
+					peer2 = peerlist.getJSONObject("peer2");
+					peer3 = peerlist.getJSONObject("peer3");
+					peer4 = peerlist.getJSONObject("peer4");
 					ip[0] = peer1.getString("peerip");
 					ip[1] = peer2.getString("peerip");
 					ip[2] = peer3.getString("peerip");
 					ip[3] = peer4.getString("peerip");
 
-					for (int i = 1; i < 4; i++) {
-						channel.basicPublish(EXCHANGE_NAME, ip[i], null, files.toString().getBytes("UTF-8"));
-					}
 
 					// Save the genisis and static-nodes files
-					JsonWriter(genisisfile, true);
-					JsonWriter(staticnodesfile, false);
+					JsonWriter(genisisfile);
+					JsonWriter(staticnodesfile);
 
 					// start up quorum first and get the smart contract address
-					// call RunQuorun.java and send the eventdata, save the files.
-														
+					try {
+						RunQuorum quorum = new RunQuorum();
+						String contractAddress = quorum.Deploy(); // get the contract address
+						quorum.PushCrossChain(jevent.getString("ownerpeer"), ip[4], jevent.getString("info"), jevent.getString("ownerchain"), jevent.getString("targetchain")); //insert crosschain data into quorum
+
+						files.put("contractaddr", contractAddress); // save the address into the json
+						
+						// call RunQuorun.java and send the eventdata, save the files.
+						
+						for (int i = 1; i < 4; i++) {
+							channel.basicPublish(EXCHANGE_NAME, ip[i], null, files.toString().getBytes("UTF-8"));
+						}
+
+						// now need to wait end event and save the transaction and shut down quorum
+						boolean close = false;
+						while(close == false) {
+							close = quorum.CheckClose();
+						}
+					}catch (Exception e) {
+						System.out.println("Quorum Error in clientapp");
+					}
+					System.out.println("all process done!");
+
 				};
 				channel.basicConsume(replyQueueName, true, deliverCallback, consumerTag -> { });
 				// create the file to generate quorum
@@ -193,7 +214,7 @@ public class ClientApp {
 	 * @return The first matching element or null if no matches are found.
 	 * @throws InterruptedException If waiting for queue elements is interrupted.
 	 */
-	private <T> T removeFirstMatch(final BlockingQueue<T> queue) //, final Predicate<? super T> match
+	private static <T> T removeFirstMatch(final BlockingQueue<T> queue) //, final Predicate<? super T> match
 			throws InterruptedException {
 		//final List<T> unmatchedElements = new ArrayList<>();
         //T element;
@@ -211,7 +232,7 @@ public class ClientApp {
 	}
 	
 	// create genisis.json file
-	private JSONObject CreateGenisis(JSONObject obj) {
+	private static JSONObject CreateGenisis(JSONObject obj) {
 		JSONObject peer1 = new JSONObject();
 		JSONObject peer2 = new JSONObject();
 		JSONObject peer3 = new JSONObject();
@@ -223,10 +244,10 @@ public class ClientApp {
 		JSONObject balance = new JSONObject();
 		balance.put("balance", "1000000000000000000000000000");
 		JSONObject peerlist = new JSONObject();
-		peerlist.put(peer1.getString(peeraddress), balance);
-		peerlist.put(peer2.getString(peeraddress), balance);
-		peerlist.put(peer3.getString(peeraddress), balance);
-		peerlist.put(peer4.getString(peeraddress), balance);
+		peerlist.put(peer1.getString("peeraddress"), balance);
+		peerlist.put(peer2.getString("peeraddress"), balance);
+		peerlist.put(peer3.getString("peeraddress"), balance);
+		peerlist.put(peer4.getString("peeraddress"), balance);
 		JSONObject genisis = new JSONObject();
 		genisis.put("alloc", peerlist);
 		genisis.put("coinbase", "0x0000000000000000000000000000000000000000");
@@ -258,7 +279,7 @@ public class ClientApp {
 	}
 
 	// Create static-node.json file
-	private JSONObject CreateStatic(JSONObject obj) {
+	private static JSONArray CreateStatic(JSONObject obj) {
 		JSONObject peer1 = new JSONObject();
 		JSONObject peer2 = new JSONObject();
 		JSONObject peer3 = new JSONObject();
@@ -273,20 +294,29 @@ public class ClientApp {
 		enodearr.put(peer2.getString("peerenode"));
 		enodearr.put(peer3.getString("peerenode"));
 		enodearr.put(peer4.getString("peerenode"));
-		System.out.println("enodes : " + enodearr.getString());
+		System.out.println("enodes : " + enodearr.toString());
 		return enodearr;
 	}
 
-	private void JsonWriter(JSONObject obj, boolean isGenisis) {
-        if (isGenisis) {
-            File jsonFile = new File("/home/belove/quorum/fromscratch/genisis.json");
-        }
-        else {
-            File jsonFile = new File("/home/belove/quorum/fromscratch/new-node-1/static-nodes.json");
-        }
+	private static void JsonWriter(JSONObject obj) {
+        File jsonFile = new File("/home/belove/quorum/fromscratch/genisis.json");
+        
         try (FileWriter file = new FileWriter(jsonFile)) {
  
-            file.write(obj.toJSONString());
+            file.write(obj.toString());
+            file.flush();
+ 
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+	}
+	
+	private static void JsonWriter(JSONArray obj) {
+        File jsonFile = new File("/home/belove/quorum/fromscratch/new-node-1/static-nodes.json");
+        
+        try (FileWriter file = new FileWriter(jsonFile)) {
+ 
+            file.write(obj.toString());
             file.flush();
  
         } catch (IOException e) {

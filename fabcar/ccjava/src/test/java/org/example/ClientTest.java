@@ -6,7 +6,7 @@ package org.example;
 
 import org.junit.Test;
 
-import main.java.org.example.RegisterService;
+import org.example.RegisterService;
 
 public class ClientTest {
 
