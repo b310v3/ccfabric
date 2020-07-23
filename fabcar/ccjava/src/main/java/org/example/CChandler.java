@@ -4,6 +4,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.File;
 import java.lang.*;
+import java.util.concurrent.TimeUnit;
 
 import com.rabbitmq.client.*;
 
@@ -37,33 +38,36 @@ public class CChandler {
 
         System.out.println("=== Start to waiting crosschain mqtt request ===");
 
-        DeliverCallback deliverCallback = (consumerTag, delivery) -> {
-            String message = new String(delivery.getBody(), "UTF-8");
-            System.out.println(" [x] Received '" +
-                delivery.getEnvelope().getRoutingKey() + "':'" + message + "'");
+        while(true) {
 
-            // handle the json files and save to quorum folder and start the quorum up.
-            JSONObject files = new JSONObject(message);
-            JSONObject genisis = files.getJSONObject("genisis");
-            JSONObject staticNodes = files.getJSONObject("static-nodes");
-            String contractAddr = files.getString("contractaddr");
+            DeliverCallback deliverCallback = (consumerTag, delivery) -> {
+                String message = new String(delivery.getBody(), "UTF-8");
+                System.out.println(" [x] Received '" +
+                    delivery.getEnvelope().getRoutingKey() + "':'" + message + "'");
 
-            JsonWriter(genisis);
-            JsonWriter(staticNodes);
+                // handle the json files and save to quorum folder and start the quorum up.
+                JSONObject files = new JSONObject(message);
+                JSONObject genisis = files.getJSONObject("genisis");
+                JSONObject staticNodes = files.getJSONObject("static-nodes");
+                String contractAddr = files.getString("contractaddr");
 
-            // start up quorum
-            RunQuorum quorum = new RunQuorum();
-            try {
-                String[] ccdata = quorum.Deploy(contractAddr, PEER);
-                System.out.println("Received crosschain data: " + ccdata[0] + ccdata[1] + ccdata[2] + ccdata[3] + ccdata[4] + ccdata[5]);
-            }catch (Exception e) {
-                System.out.println("Quorum error!");
-            }
+                JsonWriter(genisis);
+                JsonWriter(staticNodes);
 
-            // send the transaction back to the fabric
+                // start up quorum
+                RunQuorum quorum = new RunQuorum();
+                try {
+                    String[] ccdata = quorum.Deploy(contractAddr, PEER);
+                    System.out.println("Received crosschain data: " + ccdata[0] + ccdata[1] + ccdata[2] + ccdata[3] + ccdata[4] + ccdata[5]);
+                }catch (Exception e) {
+                    System.out.println("Quorum error!");
+                }
 
-        };
-        channel.basicConsume(queueName, true, deliverCallback, consumerTag -> { });
+                // send the transaction back to the fabric
+
+            };
+            channel.basicConsume(queueName, true, deliverCallback, consumerTag -> { });
+        }
     }
 
     private static void JsonWriter(JSONObject obj) {

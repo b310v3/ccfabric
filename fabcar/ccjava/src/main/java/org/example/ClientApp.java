@@ -22,6 +22,7 @@ import java.util.UUID;
 import java.io.File;
 import java.io.FileWriter;
 import java.lang.*;
+import java.util.concurrent.TimeUnit;
 
 import javax.crypto.KeyAgreement;
 
@@ -144,9 +145,10 @@ public class ClientApp {
 					// Save the genisis and static-nodes files
 					JsonWriter(genisisfile);
 					JsonWriter(staticnodesfile);
-					/*
+					
 					// start up quorum first and get the smart contract address
 					try {
+						long startTime = System.nanoTime();
 						RunQuorum quorum = new RunQuorum();
 						String contractAddress = quorum.Deploy(); // get the contract address
 						quorum.PushCrossChain(jevent.getString("ownerpeer"), ip[4], jevent.getString("info"), jevent.getString("ownerchain"), jevent.getString("targetchain")); //insert crosschain data into quorum
@@ -166,8 +168,10 @@ public class ClientApp {
 						}
 					}catch (Exception e) {
 						System.out.println("Quorum Error in clientapp");
-					}*/
-					System.out.println("all process done!");
+					}
+					long endTime = System.nanoTime();
+					long totalTime = endTime - startTime;
+					System.out.println("all process done!, time = " + totalTime / 1000000);
 					
 				};
 				channel.basicConsume(replyQueueName, true, deliverCallback, consumerTag -> { });
