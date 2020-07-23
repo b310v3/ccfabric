@@ -102,8 +102,8 @@ public class ClientApp {
 					.build();
 				// Create discovery info json
 				JSONObject jobj = new JSONObject();
-				jobj.put("targetchain", "B-fabric-chain");
-				jobj.put("sourcechain", "A-fabric-chain");
+				jobj.put("targetchain", jevent.getString("targetchain"));
+				jobj.put("sourcechain", jevent.getString("ownerchain"));
 				jobj.put("sourceadd", QUORUM_ADDRESS);
 				jobj.put("sourceenode", QUORUM_ENODE);
 
@@ -270,7 +270,7 @@ public class ClientApp {
 		genisis.put("config", config);
 		genisis.put("difficulty", "0x0");
 		genisis.put("extraData", "0x0000000000000000000000000000000000000000000000000000000000000000");
-		genisis.put("configgasLimit", "0xE0000000");
+		genisis.put("gasLimit", "0xE0000000");
 		genisis.put("mixhash", "0x00000000000000000000000000000000000000647572616c65787365646c6578");
 		genisis.put("nonce", "0x0");
 		genisis.put("parentHash", "0x0000000000000000000000000000000000000000000000000000000000000000");
@@ -299,7 +299,7 @@ public class ClientApp {
 	}
 
 	private static void JsonWriter(JSONObject obj) {
-        File jsonFile = new File("/home/belove/quorum/fromscratch/genisis.json");
+        File jsonFile = new File("/home/belove/quorum/fromscratch/genesis.json");
         
         try (FileWriter file = new FileWriter(jsonFile)) {
  

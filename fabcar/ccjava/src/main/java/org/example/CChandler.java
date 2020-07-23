@@ -67,7 +67,7 @@ public class CChandler {
     }
 
     private static void JsonWriter(JSONObject obj) {
-        File jsonFile = new File("/home/belove/quorum/fromscratch/genisis.json");
+        File jsonFile = new File("/home/belove/quorum/fromscratch/genesis.json");
        
         try (FileWriter file = new FileWriter(jsonFile)) {
  

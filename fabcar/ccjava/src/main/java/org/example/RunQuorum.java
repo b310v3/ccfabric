@@ -15,8 +15,9 @@ public class RunQuorum {
     //private final BigInteger GAS = 0;
 
     public String Deploy() throws Exception{
+        Runtime.getRuntime().exec("cd /home/belove/quorum && export PATH=$(pwd)/build/bin:$PATH");
         Runtime.getRuntime().exec("cd /home/belove/quorum/fromscratch && geth --datadir new-node-1 init genesis.json");
-        Runtime.getRuntime().exec("chmod +x /home/belove/quorum/fromscratchstartnode1.sh");
+        Runtime.getRuntime().exec("chmod +x /home/belove/quorum/fromscratch/startnode1.sh");
         Runtime.getRuntime().exec("sh /home/belove/quorum/fromscratch/startnode1.sh");
         
         Web3j web3 = Web3j.build(new HttpService("http://localhost:22000")); // connect to the quorum node
@@ -29,8 +30,9 @@ public class RunQuorum {
 
     public String[] Deploy(String contractAddress, int i) throws Exception{
         contractAddress = "0x" + contractAddress;
+        Runtime.getRuntime().exec("cd /home/belove/quorum && export PATH=$(pwd)/build/bin:$PATH");
         Runtime.getRuntime().exec("cd /home/belove/quorum/fromscratch && geth --datadir new-node-1 init genesis.json");
-        Runtime.getRuntime().exec("chmod +x /home/belove/quorum/fromscratchstartnode1.sh");
+        Runtime.getRuntime().exec("chmod +x /home/belove/quorum/fromscratch/startnode1.sh");
         Runtime.getRuntime().exec("sh /home/belove/quorum/fromscratch/startnode1.sh");
 
         Web3j web3 = Web3j.build(new HttpService("http://localhost:22000")); // connect to the quorum node
