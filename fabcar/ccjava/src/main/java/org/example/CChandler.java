@@ -21,7 +21,6 @@ public class CChandler {
     private final static String MQ_HOST = "140.118.109.132";
     private final static String USERNAME = "belove";
     private final static String PASSWORD = "oc886191";
-    private final static int PEER = 4;
     private final static String PEER_ROUTING_KEY = "peer0.org2.example.com";
     public static void main(final String[] args) throws Exception {
         ConnectionFactory factory = new ConnectionFactory();
@@ -57,7 +56,7 @@ public class CChandler {
                 // start up quorum
                 RunQuorum quorum = new RunQuorum();
                 try {
-                    String[] ccdata = quorum.Deploy(contractAddr, PEER);
+                    String[] ccdata = quorum.Deploy(contractAddr);
                     System.out.println("Received crosschain data: " + ccdata[0] + ccdata[1] + ccdata[2] + ccdata[3] + ccdata[4] + ccdata[5]);
                 }catch (Exception e) {
                     System.out.println("Quorum error!");
