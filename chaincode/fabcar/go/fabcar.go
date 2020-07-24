@@ -54,9 +54,9 @@ type Ccpeer struct {
 
 type CrossChainInfo struct {
 	Ownerpeer   string `json:"ownerpeer"`
-	Ownerchain  string `json:"ownerchian"`
+	Ownerchain  string `json:"ownerchain"`
 	CCpeer      string `json:"ccpeer"`
-	Targetchian string `json:"targetchian"`
+	Targetchian string `json:"targetchain"`
 	Info        string `json:"info"`
 }
 

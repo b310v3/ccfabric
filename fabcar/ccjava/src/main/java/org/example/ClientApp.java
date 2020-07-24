@@ -44,10 +44,10 @@ public class ClientApp {
 	private static java.util.function.Consumer<ContractEvent> contractListener;
 	private static final BlockingQueue<ContractEvent> contractEvents = new LinkedBlockingQueue<>();
 	private final static String EXCHANGE_NAME = "getupandwork";
-    private final static String CHAIN_NAME = "A";
+    private final static String CHAIN_NAME = "A-fabric-chain";
     private final static String PEER_IP = "localhost:9051";
-    private final static String QUORUM_ADDRESS = "0x01E4300aEc7188d7108880De4fBf2f0691ec797C";
-    private final static String QUORUM_ENODE = "8be33cd80714e0c967d9f6c4281c315a9b3879a8ac06626f4a359c49b3280997508b16b555a8083b6ecb53130548e32db38fdb11bcc8381ecfc0615329ea113c";
+    private final static String QUORUM_ADDRESS = "0x7e2e058ea0717d63dA6C7791ACEE54fd8eb0e0c2";
+    private final static String QUORUM_ENODE = "enode://f0940e74c7c7cdf5937118c36a6007b8cb9b920c7c39b554b509804d92ac2695f69c9185439d3b6c1d4861734b6e308d8557e3d5f354cb45481f31ad7ba2bfd9@140.118.109.132:21000?discport=0&raftport=50000";
     private final static String MQ_HOST = "140.118.109.132";
     private final static String USERNAME = "belove";
 	private final static String PASSWORD = "oc886191";
@@ -147,27 +147,38 @@ public class ClientApp {
 					JsonWriter(staticnodesfile);
 					
 					// start up quorum first and get the smart contract address
+					long startTime = System.nanoTime();
 					try {
-						long startTime = System.nanoTime();
 						RunQuorum quorum = new RunQuorum();
-						String contractAddress = quorum.Deploy(); // get the contract address
-						quorum.PushCrossChain(jevent.getString("ownerpeer"), ip[4], jevent.getString("info"), jevent.getString("ownerchain"), jevent.getString("targetchain")); //insert crosschain data into quorum
+						quorum.startQuorum();
+						System.out.println("quorum start");
 
-						files.put("contractaddr", contractAddress); // save the address into the json
-						
-						// call RunQuorun.java and send the eventdata, save the files.
-						
+						// sending two config files to other node and start up the network
 						for (int i = 1; i < 4; i++) {
 							channel.basicPublish(EXCHANGE_NAME, ip[i], null, files.toString().getBytes("UTF-8"));
 						}
-
+						
+						// Deploy the smart contract and wait for all peer to consensus it
+						String contractAddress = quorum.Deploy(); // get the contract address, NEED TO CHECK IS IT EMPTY!!!!!
+						System.out.println("quorum contract : " + contractAddress);
+						quorum.PushCrossChain(jevent.getString("ownerpeer"), ip[3], jevent.getString("info"), jevent.getString("ownerchain"), jevent.getString("targetchain")); //insert crosschain data into quorum
+						System.out.println("quorum push succdess?");
+						JSONObject address = new JSONObject();
+						address.put("contractaddr", contractAddress);
+						//files.put("contractaddr", contractAddress); // save the address into the json
+						
+						// call RunQuorun.java and send the eventdata, save the files.
+						for (int i = 1; i < 4; i++) {
+							channel.basicPublish(EXCHANGE_NAME, ip[i], null, address.toString().getBytes("UTF-8"));
+						}
+						System.out.println("quorum file send");
 						// now need to wait end event and save the transaction and shut down quorum
 						boolean close = false;
 						while(close == false) {
 							close = quorum.CheckClose();
 						}
 					}catch (Exception e) {
-						System.out.println("Quorum Error in clientapp");
+						e.printStackTrace();
 					}
 					long endTime = System.nanoTime();
 					long totalTime = endTime - startTime;
@@ -267,7 +278,7 @@ public class ClientApp {
 		JSONObject maxCodeSizeConfig = new JSONObject();
 		JSONArray configarr = new JSONArray();
 		maxCodeSizeConfig.put("block", 0);
-		maxCodeSizeConfig.put("size", 35);
+		maxCodeSizeConfig.put("size", 64);
 		configarr.put(maxCodeSizeConfig);
 		config.put("maxCodeSizeConfig", configarr);
 		config.put("isQuorum", true);
